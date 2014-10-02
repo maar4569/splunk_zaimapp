@@ -1,0 +1,127 @@
+{% extends "splunkdj:base_with_app_bar.html" %}
+{# % extends "splunkdj:base_with_account_bar.html" % #}
+{% load splunkmvc %}
+
+{# start css 20140908 #}
+{% block css %}
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}{{app_name}}/custom.css">
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}splunkjs/css/dashboard.css">
+<style type="text/css">
+#punch_search{
+    height: 300px;
+}
+#bubble_search{
+    height:600px;
+    width:600px;
+}
+</style>
+{% endblock css %}
+{# end css 20140908 #}
+
+{% block content %}
+<div class="dashboard-body container-fluid main-section-body" >
+<h2>Summary</h2>
+    <div class="dashboard-row">
+        <div class="dashboard-cell" >
+            <div class="dashboard-panel">
+                <div class="panel-head">
+                    <h2>Total Costs And Average</h2>with private money
+                </div>
+                <div class="panel-body" style="width:1600px;">
+                    <div style="float:left;width:65%" id="expenses_line"></div>
+                    <div id="avg_by_cat_pie"></div>
+                </div>
+            </div>
+        </div>
+<!--	<div class="dashboard-cell" >
+            <div class="dashboard-panel">
+                <div class="panel-head">
+                    <h2>Average Costs By Category</h2>
+                </div>
+                <div class="panel-body" style="width:512px;">
+                    <div id="avg_by_cat_pie"></div>
+                </div>
+            </div>
+        </div>
+	-->
+    </div>
+    <div class="dashboard-row">
+        <div class="dashboard-cell">
+            <div class="dashboard-panel">
+                <div class="panel-head">
+                  <h2>Total Costs By Category</h2>without private money
+                </div>
+                <div class="panel-body" style="width:1024px;height:384px;">
+                    <div id="total_by_cat_chart"></div>
+                </div>
+            </div>   
+        </div>
+    </div>
+</div><!-- end dashboard-body  -->
+{% endblock content%}
+
+{% block js %}
+    <script>
+        var deps = [
+            "splunkjs/ready!",
+            "splunkjs/mvc/searchmanager",
+	    "splunkjs/mvc/chartview",
+	    "jquery",//add for punchcard
+	    "splunk_wftoolkit/components/punchcard/punchcard" ,//add or punchcard
+	    "splunk_wftoolkit/components/bubblechart/bubblechart",  //add for bubblechart
+	    "splunkjs/mvc/dropdownview",
+	    "splunkjs/mvc/timelineview",
+	    "splunkjs/mvc/tokenforwarder"
+        ];
+	require(deps, function(mvc) {
+            var SearchManager = require("splunkjs/mvc/searchmanager");
+            var ChartView=require("splunkjs/mvc/chartview");
+            new SearchManager({
+                id: "line_search",
+                search: mvc.tokenSafe("index=zaimdb | eval n_month=strftime(_time,\"%m\") | stats sum(amount) As total by date_year n_month | eval total=total+25000 | eval year_month=mvappend(date_year,\"/\", n_month) | trendline sma3(total) as trend(avg) | table year_month  trend(avg) total ") 
+            });
+            var myLineChart = new ChartView({
+                id: "mylinechart",
+                managerid: "line_search",
+                type: "column",
+                el: $("#expenses_line")
+	    }).render();
+	    var totalChart = splunkjs.mvc.Components.getInstance("mylinechart");
+            totalChart.settings.set({
+                "charting.chart.overlayFields": "trend(avg)"
+	    });	
+            //////////////////////////////////////
+	    //total by category chart
+	    //////////////////////////////////////
+	    var mgrId = "totalByCatSearch";
+            new SearchManager({
+                id: mgrId,
+		//search: mvc.tokenSafe("| pivot Zaim_Data zaim_data sum(amount) AS \"amount\" SPLITROW _time AS _time PERIOD auto SPLITCOL category_name SORT 0 _time ROWSUMMARY 0 COLSUMMARY 0 NUMCOLS 100 SHOWOTHER 1")
+		search: mvc.tokenSafe("| pivot Zaim_Data zaim_data sum(amount) AS \"amount\" SPLITROW month_year AS month_year PERIOD auto SPLITCOL category_name SORT 0 _time ROWSUMMARY 0 COLSUMMARY 0 NUMCOLS 100 SHOWOTHER 1")
+            });
+            var totalByCatChart = new ChartView({
+                id: "totalByCatChart",
+                managerid: mgrId,
+                type: "area",
+		el: $("#total_by_cat_chart"),
+		"charting.chart.stackMode": "stacked",
+		"charting.axisLabelsY.majorUnit": "5000"
+            }).render();
+	    ///////////////////////////////////////
+	    //piechart average by category
+	    mgrId = "avgByCatSearch";
+	    new SearchManager({
+                id: mgrId,
+		search: mvc.tokenSafe("| datamodel Zaim_Data zaim_data search | stats sum(zaim_data.amount) AS amount by zaim_data.month_year zaim_data.category_name | stats avg(amount) As average by zaim_data.category_name | eval average=round(average)")
+	    });
+	    var avgByCatChart = new ChartView({
+                id: "avgByCatPie",
+		managerid: mgrId,
+		type: "pie",
+		el: $("#avg_by_cat_pie"),
+		"charting.chart.showPercent": "true"
+	    }).render();
+
+       }); //require end
+    </script>
+{% endblock js %}

@@ -1,0 +1,88 @@
+{% extends "splunkdj:base_with_app_bar.html" %}
+{# % extends "splunkdj:base_with_account_bar.html" % #}
+{% load splunkmvc %}
+
+{# start css 20140908 #}
+{% block css %}
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}{{app_name}}/custom.css">
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}splunkjs/css/dashboard.css">
+<style type="text/css">
+#punch_search{
+    height: 300px;
+}
+#bubble_search{
+    height:600px;
+    width:600px;
+}
+</style>
+{% endblock css %}
+{# end css 20140908 #}
+
+{% block content %}
+<div class="dashboard-body container-fluid main-section-body" >
+    <div class="dashboard-row">
+        <div class="dashboard-cell" >
+            <div class="dashboard-panel">
+                <div class="panel-head">
+                  <h2>Total Costs And Average</h2>with private money
+                </div>
+                <div class="panel-body" style="width:1024px;">
+                    <div id="expenses_line"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content%}
+
+{% block js %}
+    <script>
+        var deps = [
+            "splunkjs/ready!",
+            "splunkjs/mvc/searchmanager",
+	    "splunkjs/mvc/chartview",
+	    "jquery",//add for punchcard
+	    "splunk_wftoolkit/components/punchcard/punchcard" ,//add or punchcard
+	    "splunk_wftoolkit/components/bubblechart/bubblechart",  //add for bubblechart
+	    "splunkjs/mvc/dropdownview",
+	    "splunkjs/mvc/timelineview",
+	    "splunkjs/mvc/tokenforwarder"
+        ];
+	require(deps, function(mvc) {
+            var TokenForwarder= require("splunkjs/mvc/tokenforwarder");
+            var SearchManager = require("splunkjs/mvc/searchmanager");
+	     //create search query start 
+             var createQueryByCidGidAndYear = function(category_id,genre_id,year){
+	         var subsrch ="";
+                 var now = new Date();
+                 var c_id = "category_id=" + category_id; //105;
+                 var g_id = "genre_id=" + genre_id;    //10503;
+		 var table_cols = "";
+		 var s_year = now.getFullYear();
+                 for(var yr=s_year ; yr > (s_year-year) ; yr--){
+                     subsrch = subsrch + " [ search index=zaimdb " +  c_id + " " + g_id + " date_year=" + yr + " | " + "eval n_month=strftime(_time,\"%m\") | stats sum(amount) AS charge(" + yr + ") by n_month ]";
+                     var table_cols = table_cols + "charge(" + yr +") ";
+                 };
+		 var qry= "| set union " + subsrch + " | selfjoin n_month keepsingle=true " + " | " + "table n_month " + table_cols;
+	             return qry;
+	     };
+             var qry = createQueryByCidGidAndYear("$cat_id$","$gre_id$",2);
+             //create search query end
+             ///////////////////////////////////////////////////////////////////////
+             //Bar Chart for Total cost yearly Comparison
+	     ///////////////////////////////////////////////////////////////////////
+             var ChartView=require("splunkjs/mvc/chartview");
+             new SearchManager({
+                 id: "cmp_yr_search",       
+                 search: mvc.tokenSafe( qry )
+             });
+             var myBarChart = new ChartView({
+                 id: "mybarchart",
+                 managerid: "cmp_yr_search",
+                 type: "column",
+                 "charting.chart.nullValueMode": "connect",
+                 el: $("#cmp_yearly")
+             }).render();
+       }); //require end
+    </script>
+{% endblock js %}

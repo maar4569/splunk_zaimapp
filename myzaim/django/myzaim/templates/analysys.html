@@ -1,0 +1,311 @@
+{% extends "splunkdj:base_with_app_bar.html" %}
+{# % extends "splunkdj:base_with_account_bar.html" % #}
+{% load splunkmvc %}
+
+{# start css 20140908 #}
+{% block css %}
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}{{app_name}}/custom.css">
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}splunkjs/css/dashboard.css">
+<style type="text/css">
+#punch_search{
+    height: 300px;
+}
+#bubble_search{
+    height:600px;
+    width:600px;
+}
+</style>
+{% endblock css %}
+{# end css 20140908 #}
+
+{% block content %}
+<div class="dashboard-body container-fluid main-section-body" >
+    <div class="dashboard-row">
+        <div class="dashboard-cell" >
+            <div class="dashboard-panel">
+                <div class="panel-head">
+                  <h2>Category Trendline (compared with past 5years)</h2>
+                </div>
+                <div class="panel-body" style="width:600px;">
+                    <div style="float:left;" id="category_list"></div>
+                    <div style="float:left;" id="genre_list"></div>
+                    <div style="clear:both;" id="cmp_yearly"></div>
+                </div>
+            </div>
+        </div>
+        <div class="dashboard-cell" >
+            <div class="dashboard-panel">
+                <div class="panel-head">
+                  <h2>Foods Trendline (compared with same month in last year</h2>
+                </div>
+                <div class="panel-body" style="width:720px;">
+                    <div id="list_month"></div>
+                    <div id="cmp_line"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="dashboard-row">
+        <div class="dashboard-cell">
+            <div class="dashboard-panel">
+                <div class="panel-head">
+                    <h2>Category Trendline (about Average)</h2>
+                </div>
+                <div class="panel-body" style="width:1280px;">
+                    <div id="cat_msg">category</div>
+                    <div style="float:left;width:640px;" id="cat_avg_trend"></div>
+                    <div id="gre_msg">genre</div>
+                    <div style="float:left:width:640px;" id="gre_avg_trend"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content%}
+
+{% block js %}
+    <script>
+        var deps = [
+            "splunkjs/ready!",
+            "splunkjs/mvc/searchmanager",
+	    "splunkjs/mvc/chartview",
+	    "jquery",//add for punchcard
+	    "splunk_wftoolkit/components/punchcard/punchcard" ,//add or punchcard
+	    "splunk_wftoolkit/components/bubblechart/bubblechart",  //add for bubblechart
+	    "splunkjs/mvc/dropdownview",
+	    "splunkjs/mvc/timelineview",
+	    "splunkjs/mvc/tokenforwarder"
+        ];
+	require(deps, function(mvc) {
+            var TokenForwarder= require("splunkjs/mvc/tokenforwarder");
+            var SearchManager = require("splunkjs/mvc/searchmanager");
+	    //add punchcard start
+	    //add punchcard end
+
+	    //add bubble start
+ 
+            // TODO: Event handler
+            var ChartView=require("splunkjs/mvc/chartview");
+            new SearchManager({
+                id: "line_search",
+                search: mvc.tokenSafe("index=zaimdb | eval n_month=strftime(_time,\"%m\") | stats sum(amount) As total by date_year n_month | eval total=total+25000 | eval year_month=mvappend(date_year,\"/\", n_month) | trendline sma3(total) as trend(avg) | table year_month  trend(avg) total ") 
+            });
+            var myLineChart = new ChartView({
+                id: "mylinechart",
+                managerid: "line_search",
+                type: "column",
+                el: $("#expenses_line")
+	    }).render();
+	    var totalChart = splunkjs.mvc.Components.getInstance("mylinechart");
+            totalChart.settings.set({
+                "charting.chart.overlayFields": "trend(avg)"
+            });  
+            /////////////////////////////////////////////////////////////////////
+	    //Line Chart for Foods comparison this year with  last year
+            //////////////////////////////////////////////////////////////////////
+            var tokens=["$month_s$","$month_e$","$month_s_l$","$month_e_l$"];
+            var ChartView=require("splunkjs/mvc/chartview");
+            new SearchManager({
+                id: "cmpline_search",                 
+                //search: mvc.tokenSafe("| set union [search index=zaimdb category_id=101 earliest=\"$month_s$\" latest=\"$month_e$\" | stats sum(amount) AS amount_mday by date_mday | sort by date_mday | accum amount_mday AS total(latest) | table date_mday  total(latest) ] [search index=zaimdb category_id=101 earliest=\"$month_s_l$\" latest=\"$month_e_l$\" | stats sum(amount) AS amount_mday2 by date_mday | sort by date_mday | accum amount_mday2 AS total(last_year) | table date_mday  total(last_year)] | selfjoin date_mday keepsingle=true  | sort by date_mday")
+                search: mvc.tokenSafe("| set union [search index=zaimdb category_id=101 earliest=\"" + tokens[0]+ "\" latest=\""+ tokens[1]+"\" | stats sum(amount) AS amount_mday by date_mday | sort by date_mday | accum amount_mday AS total(latest) | table date_mday  total(latest) ] [search index=zaimdb category_id=101 earliest=\"" + tokens[2] + "\" latest=\"" + tokens[3] + "\" | stats sum(amount) AS amount_mday2 by date_mday | sort by date_mday | accum amount_mday2 AS total(last_year) | table date_mday  total(last_year)] | selfjoin date_mday keepsingle=true  | sort by date_mday")
+            });
+            var myLineChart = new ChartView({
+                id: "mylinechart2",
+                managerid: "cmpline_search",
+                type: "line",
+                "charting.chart.nullValueMode": "connect",
+                el: $("#cmp_line")
+            }).render();
+            ///////////////////////////////////////////////////////////////////////
+            //Dropdown month
+            ///////////////////////////////////////////////////////////////////////
+	    var DropdownView = require("splunkjs/mvc/dropdownview");
+	    var ddlist = [{ label:"Jan(01)" , value:"01"},
+	                  { label:"Feb(02)" , value:"02"},
+	                  { label:"Mar(03)" , value:"03"},
+	                  { label:"Apr(04)" , value:"04"},
+	                  { label:"May(05)" , value:"05"},
+	                  { label:"Jun(06)" , value:"06"},
+	                  { label:"Jul(07)" , value:"07"},
+	                  { label:"Aug(08)" , value:"08"},
+	                  { label:"Sep(09)" , value:"09"},
+	                  { label:"Aut(10)" , value:"10"},
+	                  { label:"Nov(11)" , value:"11"},
+	                  { label:"Dec(12)" , value:"12"}
+			  ];
+	    var myDropDownMonth = new DropdownView({
+		id: "cmp_dropdown",
+		managerid: "cmlpine_search",
+		choices: ddlist,
+		value: mvc.tokenSafe("$month_seed$"),
+		el: $("#list_month")
+	    }).render();
+            var sbg = splunkjs.mvc.Components.getInstance("cmp_dropdown");
+	//    var sbResult = document.getElementById("result");
+	    sbg.on("change",function(){
+		 var now = new Date();
+          //       sbResult.innerHTML="";
+		 //timerange(targetMonth in LatestYear)
+                 new TokenForwarder( "$month_seed$" , tokens[0], function(targetMonth){
+	             var now = new Date();
+		     resultToken= targetMonth + "/01/" + now.getFullYear() +  ":00:00:00";
+		     return resultToken;
+	         });
+		 new TokenForwarder( "$month_seed$" , tokens[1], function(targetMonth){
+	             var now = new Date();
+                     var month_e = Number(targetMonth)+ 1;
+		     if ( month_e < 10 )  {
+		         month_e = "0" + month_e ;
+		         var resultToken = month_e + "/01/" + now.getFullYear() +  ":00:00:00";
+		     }else if(month_e == 13) {
+                         month_e = "01";
+		         var resultToken = month_e + "/01/" + (now.getFullYear()+1) +  ":00:00:00";
+                     }else{
+		         var  resultToken = month_e + "/01/" + now.getFullYear() +  ":00:00:00";
+		     };
+		     return resultToken;
+	         });
+
+                 //timerange (targetMonth in Lastyear)                 
+                 new TokenForwarder( "$month_seed$" , tokens[2] , function(targetMonth){
+                     var now = new Date();
+                     resultToken= targetMonth + "/01/" + (now.getFullYear()-1) +  ":00:00:00";
+                     return resultToken;
+                 });
+                 new TokenForwarder( "$month_seed$" , tokens[3], function(targetMonth){
+                     var now = new Date();
+                     var month_e = Number(targetMonth)+ 1;
+                     if ( month_e < 10 )  {
+                         month_e = "0" + month_e ;
+                         var resultToken = month_e + "/01/" + (now.getFullYear()-1) +  ":00:00:00";
+                     }else if(month_e == 13){
+                         month_e = "01";
+                         var resultToken = month_e + "/01/" + (now.getFullYear()) +  ":00:00:00";
+                     }else{
+                         resultToken = month_e + "/01/" + (now.getFullYear()-1) +  ":00:00:00";
+                     };
+                     return resultToken;
+		 });
+
+                 //sbResult.innerHTML = sbResult.innerHTML + tokens[0] + "-" + tokens[1] + "   " + tokens[2] + "-" + tokens[3] ;
+	     }); //sbg.on end
+ 
+	     //create search query start 
+             var createQueryByCidGidAndYear = function(category_id,genre_id,year){
+	         var subsrch ="";
+                 var now = new Date();
+                 var c_id = "category_id=" + category_id; //105;
+                 var g_id = "genre_id=" + genre_id;    //10503;
+		 var table_cols = "";
+		 var s_year = now.getFullYear();
+                 for(var yr=s_year ; yr > (s_year-year) ; yr--){
+                     subsrch = subsrch + " [ search index=zaimdb " +  c_id + " " + g_id + " date_year=" + yr + " | " + "eval n_month=strftime(_time,\"%m\") | stats sum(amount) AS charge(" + yr + ") by n_month ]";
+                     var table_cols = table_cols + "charge(" + yr +") ";
+                 };
+		 var qry= "| set union " + subsrch + " | selfjoin n_month keepsingle=true " + " | " + "table n_month " + table_cols;
+	             return qry;
+	     };
+             var qry = createQueryByCidGidAndYear("$cat_id$","$gre_id$",2);
+            // sbResult.innerHTML = sbResult.innerHTML + " query -> " + qry;
+             //create search query end
+             
+
+             ///////////////////////////////////////////////////////////////////////
+             //Bar Chart for Total cost yearly Comparison
+	     ///////////////////////////////////////////////////////////////////////
+             var ChartView=require("splunkjs/mvc/chartview");
+             new SearchManager({
+                 id: "cmp_yr_search",       
+                 search: mvc.tokenSafe( qry )
+                     //search: "| pivot Zaim_Data zaim_data sum(amount) AS \"cost\" SPLITROW n_month AS month SPLITCOL date_year SORT 0 n_month ROWSUMMARY 0 COLSUMMARY 0 NUMCOLS 0 SHOWOTHER 0"
+
+                     //search: mvc.tokenSafe( "| set union [search index=zaimdb category_id=105 genre_id=10503 date_year=2013 | eval n_month=strftime(_time,\"%m\") | stats sum(amount) AS charge(2013) by n_month ]  [search index=zaimdb category_id=105 genre_id=10503 date_year=2014 | eval n_month=strftime(_time,\"%m\") |  stats sum(amount) AS charge(2014) by n_month ] | selfjoin n_month keepsingle=true | table n_month charge(2013) charge(2014)")
+                     //search: mvc.tokenSafe("| set union [search index=zaimdb category_id=101 earliest=\"$month_s$\" latest=\"$month_e$\" | stats sum(amount) AS amount_mday by date_mday | sort by date_mday | accum amount_mday AS total(latest) | table date_mday  total(latest) ] [search index=zaimdb category_id=101 earliest=\"$month_s_l$\" latest=\"$month_e_l$\" | stats sum(amount) AS amount_mday2 by date_mday | sort by date_mday | accum amount_mday2 AS total(last_year) | table date_mday  total(last_year)] | selfjoin date_mday keepsingle=true  | sort by date_mday")
+             });
+             var myBarChart = new ChartView({
+                 id: "mybarchart",
+                 managerid: "cmp_yr_search",
+                 type: "column",
+                 "charting.chart.nullValueMode": "connect",
+                 el: $("#cmp_yearly")
+             }).render();
+             ///////////////////////////////////////////////////////////////////////
+             //Dropdown List for Category and Genre
+             //////////////////////////////////////////////////////////////////////
+             var DropdownView = require("splunkjs/mvc/dropdownview");
+             //category list
+             new DropdownView({
+                 id: "category_list",
+                 default: "",
+                 managerid: "category-search",
+                 labelField: "category_name",
+                 valueField: "category_id",
+                 value: mvc.tokenSafe("$cat_id$"),
+                 el: $("#category_list")
+             }).render();
+             new SearchManager({
+                 id: "category-search",
+                 search: "index=zaimdb | table category_id category_name | dedup category_id | sort by category_id"
+             });
+             //genre list
+             var greSrchMgrId = "genre-search"
+             new SearchManager({
+                 id: greSrchMgrId,
+                 search: mvc.tokenSafe("index=zaimdb category_id=$cat_id$ | table genre_id genre_name | dedup genre_id | sort by genre_id") 
+             });     
+             var greDrpdwnId="genre_list";
+             new DropdownView({
+                 id: greDrpdwnId,
+                 managerid: greSrchMgrId,
+                 labelField: "genre_name",
+                 valueField: "genre_id",
+                 value: mvc.tokenSafe("$gre_id$"),
+                 el: $("#genre_list")
+             }).render();    
+             var sbg = splunkjs.mvc.Components.getInstance(greDrpdwnId);
+             sbg.on("change", function(){
+                 document.getElementById("gre_msg").innerHTML = "genre id =" + sbg.val();
+             });
+
+            ////////////////////////////////////////////////////////
+            //Trend by Category Or Genre
+            ////////////////////////////////////////////////////////
+            var avgSearcher =  new SearchManager({
+                id: "avg-search",
+                search: mvc.tokenSafe("index=zaimdb category_id=$cat_id$ | eval n_month=strftime(_time,\"%m\") | stats sum(amount) As total count(amount) as eventcounts by date_year n_month | eval year_month=mvappend(date_year,\"/\", n_month) | trendline sma3(total) as trend(avg) | table year_month  trend(avg) total ") 
+            });
+            var avgTrendChartId = "avtTrendChart";
+            var avgTrendChart = new ChartView({
+                id: avgTrendChartId,
+                managerid: "avg-search",
+                type: "column",
+                el: $("#cat_avg_trend")
+            }).render();
+            var avgChart = splunkjs.mvc.Components.getInstance(avgTrendChartId);
+            avgChart.settings.set({
+                "charting.chart.overlayFields": "trend(avg)"
+            });        
+            //genre
+            var avgGenreSrchMgr  = "avg-gre-search";
+            var avgGenreSearcher =  new SearchManager({
+                id: avgGenreSrchMgr,
+                search: mvc.tokenSafe("index=zaimdb category_id=$cat_id$ genre_id=$gre_id$ | eval n_month=strftime(_time,\"%m\") | stats sum(amount) As total count(amount) as eventcounts by date_year n_month | eval year_month=mvappend(date_year,\"/\", n_month) | trendline sma3(total) as trend(avg) | table year_month  trend(avg) total ") 
+            });
+            
+            var avgGreTrendChartId = "avtGenreTrendChart";
+            var avgGreTrendChart = new ChartView({
+                id: avgGreTrendChartId,
+                managerid: avgGenreSrchMgr,
+                type: "column",
+                el: $("#gre_avg_trend")
+            }).render();
+            var objView = splunkjs.mvc.Components.getInstance(avgGreTrendChartId);
+            objView.settings.set({
+                "charting.chart.overlayFields": "trend(avg)"
+            });  
+            
+
+       }); //require end
+    </script>
+{% endblock js %}

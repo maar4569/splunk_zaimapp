@@ -1,0 +1,91 @@
+{% extends "splunkdj:base_with_app_bar.html" %}
+{# % extends "splunkdj:base_with_account_bar.html" % #}
+{% load splunkmvc %}
+
+{# start css 20140908 #}
+{% block css %}
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}{{app_name}}/custom.css">
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}splunkjs/css/dashboard.css">
+<style type="text/css">
+#punch_search{
+    height: 300px;
+}
+#bubble_search{
+    height:600px;
+    width:600px;
+}
+</style>
+{% endblock css %}
+{# end css 20140908 #}
+
+{% block content %}
+<div class="dashboard-body container-fluid main-section-body" >
+    <div class="dashboard-row">
+        <div class="dashboard-cell">
+            <div class="dashboard-panel">
+                <div class="panel-head">
+                    <h2>Shopping Place And Trend for Weekyday</h2>
+                </div>
+                <div class="panel-body" style="width:1280px;">
+                    <div style="float:left; witdh:640px;" id="bubble_search"></div>
+                    <div style="float:left; width:640px;" id="punch_search"></div>
+               </div>
+            </div>
+        </div>
+    </div>
+    <div id="result"></div>
+</div>
+{% endblock content%}
+
+{% block js %}
+    <script>
+        var deps = [
+            "splunkjs/ready!",
+            "splunkjs/mvc/searchmanager",
+	    "splunkjs/mvc/chartview",
+	    "jquery",//add for punchcard
+	    "splunk_wftoolkit/components/punchcard/punchcard" ,//add or punchcard
+	    "splunk_wftoolkit/components/bubblechart/bubblechart",  //add for bubblechart
+	    "splunkjs/mvc/dropdownview",
+	    "splunkjs/mvc/timelineview",
+	    "splunkjs/mvc/tokenforwarder"
+        ];
+	require(deps, function(mvc) {
+            var TokenForwarder= require("splunkjs/mvc/tokenforwarder");
+            var SearchManager = require("splunkjs/mvc/searchmanager");
+	    //add punchcard start
+            /////////////////////////////////////////////////////////////////////
+            //food cost by weekday
+            /////////////////////////////////////////////////////////////////////
+	    var PunchCard = require("splunk_wftoolkit/components/punchcard/punchcard");
+	    new SearchManager({
+                id: "punch_search",
+		search: "index=zaimdb category_id=101 |  stats count by date_wday genre_name"
+		//NGsearch: "index=zaimdb category_id=101 |  stats sum(amount) by date_wday genre_name"
+	       
+	    });
+	    var mypunchcard = new PunchCard({
+	        id: "mypunchcard",
+		managerid: "punch_search",
+		el: $("#punch_search")
+	    }).render();
+
+	    //add bubble start
+            /////////////////////////////////////////////////////////////////////
+            // shopping place with bubble chart
+            /////////////////////////////////////////////////////////////////////
+            var BubbleChart = require("splunk_wftoolkit/components/bubblechart/bubblechart");
+            new SearchManager({
+                id: "bubble_search",
+                search: "index=zaimdb category_id=101 | stats count  by place"
+	    });
+            var myBubble = new BubbleChart({
+                id: "mybubble",
+		managerid: "bubble_search",
+		labelField: "place",
+		categoryField: "place",
+                el: $("#bubble_search")
+            }).render();
+       }); //require end
+    </script>
+{% endblock js %}

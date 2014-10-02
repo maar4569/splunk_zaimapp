@@ -1,0 +1,84 @@
+{% extends "splunkdj:base_with_app_bar.html" %}
+{# % extends "splunkdj:base_with_account_bar.html" % #}
+{% load splunkmvc %}
+
+{# start css 20140908 #}
+{% block css %}
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}{{app_name}}/custom.css">
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}splunkjs/css/dashboard.css">
+<style type="text/css">
+#punch_search{
+    height: 300px;
+}
+#bubble_search{
+    height:600px;
+    width:600px;
+}
+</style>
+{% endblock css %}
+{# end css 20140908 #}
+
+{% block content %}
+<div class="dashboard-body container-fluid main-section-body" >
+    <div class="dashboard-row">
+        <div class="dashboard-cell">
+            <div class="dashboard-panel">
+                <div class="panel-head">
+                    <h4>Enter Keyword</h4>
+                </div>
+                <div class="panel-body" style="width:1280px;">
+                    <div id="advsearchbar"></div>
+		    <div id="resulttable"></div>
+               </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content%}
+
+{% block js %}
+    <script>
+        var deps = [
+            "splunkjs/ready!",
+            "splunkjs/mvc/searchmanager",
+	    "splunkjs/mvc/searchbarview",
+	    "splunkjs/mvc/tableview",
+	    "splunkjs/mvc/tokenforwarder"
+        ];
+	require(deps, function(mvc) {
+            var TokenForwarder= require("splunkjs/mvc/tokenforwarder");
+	    var SearchManager = require("splunkjs/mvc/searchmanager");
+	    var SearchbarView = require("splunkjs/mvc/searchbarview");
+	    var TableView  = require("splunkjs/mvc/tableview");
+	    //search manager
+	    var mgrId = "kwdsearch";
+	    var advSearchMgr = new SearchManager({
+		id: mgrId,
+		app: "search",
+	        preview: true,
+	        required_field_list: "*",
+	        status_buckets: 300,
+		search: ""
+	    });
+            
+            //search bar
+	    var searchBar = new SearchbarView({
+	        id: "advsearchbar",
+		managerid: mgrId,
+		el: $("#advsearchbar")
+	    }).render();
+            //table view
+	    var resultTable = new TableView({
+	        id: "resutltbl",
+		managerid: mgrId,
+	        pageSize: "50",
+		el: $("#resulttable")
+            }).render();
+	    searchBar.on("change",function(){
+		qrySuffix = "index=zaimdb"
+	        advSearchMgr.settings.unset("search");
+		advSearchMgr.settings.set("search",qrySuffix + " " + searchBar.val() + " | table date,place,amount,name,category_name,genre_name,category_id,genre_id");
+	    });
+       }); //require end
+    </script>
+{% endblock js %}
