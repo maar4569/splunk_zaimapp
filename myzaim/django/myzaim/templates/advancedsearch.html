@@ -2,7 +2,6 @@
 {# % extends "splunkdj:base_with_account_bar.html" % #}
 {% load splunkmvc %}
 
-{# start css 20140908 #}
 {% block css %}
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}{{app_name}}/custom.css">
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}splunkjs/css/dashboard.css">
@@ -16,7 +15,6 @@
 }
 </style>
 {% endblock css %}
-{# end css 20140908 #}
 
 {% block content %}
 <div class="dashboard-body container-fluid main-section-body" >
@@ -27,6 +25,7 @@
                     <h4>Enter Keyword</h4>
                 </div>
                 <div class="panel-body" style="width:1280px;">
+                    <div id="total-view"></div>
                     <div id="advsearchbar"></div>
 		    <div id="resulttable"></div>
                </div>
@@ -43,13 +42,15 @@
             "splunkjs/mvc/searchmanager",
 	    "splunkjs/mvc/searchbarview",
 	    "splunkjs/mvc/tableview",
-	    "splunkjs/mvc/tokenforwarder"
+	    "splunkjs/mvc/tokenforwarder",
+	    "splunkjs/mvc/singleview"
         ];
 	require(deps, function(mvc) {
             var TokenForwarder= require("splunkjs/mvc/tokenforwarder");
 	    var SearchManager = require("splunkjs/mvc/searchmanager");
 	    var SearchbarView = require("splunkjs/mvc/searchbarview");
 	    var TableView  = require("splunkjs/mvc/tableview");
+	    var SingleView = require("splunkjs/mvc/singleview");
 	    //search manager
 	    var mgrId = "kwdsearch";
 	    var advSearchMgr = new SearchManager({
@@ -59,8 +60,21 @@
 	        required_field_list: "*",
 	        status_buckets: 300,
 		search: ""
+            });
+	    //TotalAmount
+	    var advSearchMgr2 = new SearchManager({
+	      id: "kwdsearch2",
+	      app: "search",
+	      preview: true,
+	      required_field_list: "*",
+	      status_buckets: 300,
+	      search: ""
 	    });
-            
+	    var singleView = new SingleView({
+	      id: "total-view",
+	      managerid: "kwdsearch2",
+	      el: $("#total-view")
+	    });
             //search bar
 	    var searchBar = new SearchbarView({
 	        id: "advsearchbar",
@@ -75,9 +89,12 @@
 		el: $("#resulttable")
             }).render();
 	    searchBar.on("change",function(){
-		qrySuffix = "index=zaimdb"
+	        //qrySuffix = "index=zaimdb |  search"
+	        qrySuffix = "| datamodel Zaim_Data zaim_data search | search"
 	        advSearchMgr.settings.unset("search");
-		advSearchMgr.settings.set("search",qrySuffix + " " + searchBar.val() + " | table date,place,amount,name,category_name,genre_name,category_id,genre_id");
+		advSearchMgr.settings.set("search",qrySuffix + " " + searchBar.val() + "  | table zaim_data.date , zaim_data.place , zaim_data.amount , zaim_data.name , zaim_data.category_name , zaim_data.genre_name , zaim_data.category_id , zaim_data.genre_id ");
+	        advSearchMgr2.settings.unset("search");
+		advSearchMgr2.settings.set("search",qrySuffix + " " + searchBar.val() + " | stats sum(zaim_data.amount) ");
 	    });
        }); //require end
     </script>

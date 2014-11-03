@@ -1,0 +1,92 @@
+{% extends "splunkdj:base_with_app_bar.html" %}
+{# % extends "splunkdj:base_with_account_bar.html" % #}
+{% load splunkmvc %}
+
+{% block css %}
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}{{app_name}}/custom.css">
+<link rel="stylesheet" type="text/css" href="{{STATIC_URL}}splunkjs/css/dashboard.css">
+<style type="text/css">
+#punch_search{
+    height: 300px;
+}
+#bubble_search{
+    height:600px;
+    width:600px;
+}
+</style>
+{% endblock css %}
+
+{% block content %}
+<div class="dashboard-body container-fluid main-section-body" >
+<h2>Simulation</h2>
+    <div class="dashboard-row">
+        <div class="dashboard-cell" >
+            <div class="dashboard-panel">
+                <div class="panel-head">
+                    <h2>Effeciency Simulation</h2>
+                </div>
+                <div class="panel-body" style="width:600px;height:800px;">
+                    <div style="float:left;" id="percentage_list"></div>
+                    <div style="clear:both;"id="result_table"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div><!-- end dashboard-body  -->
+{% endblock content%}
+
+{% block js %}
+    <script>
+        var deps = [
+            "splunkjs/ready!",
+            "splunkjs/mvc/searchmanager",
+	    "splunkjs/mvc/chartview",
+	    "splunkjs/mvc/tableview",
+	    "jquery",//add for punchcard
+	    "splunkjs/mvc/dropdownview",
+	    "splunkjs/mvc/tokenforwarder"
+        ];
+	require(deps, function(mvc) {
+            var SearchManager = require("splunkjs/mvc/searchmanager");
+            var ChartView=require("splunkjs/mvc/chartview");
+            var TableView=require("splunkjs/mvc/tableview");
+	    ///////////////////////////////////////
+	    //piechart average by category
+            //calculate average 2013/06 - now
+	    var endYear=2013;
+	    var endMonth=7;
+	    var now=new Date();
+	    var startYear = now.getFullYear();
+	    var startMonth = now.getMonth()+1;
+	    var n_monthes = (startYear-endYear) * 12 + startMonth-endMonth + 1;
+	    var qry = "index=zaimdb | stats sum(amount) as total by category_name  | eval nmonths="+ n_monthes +"|  eval avg_m=round(total/nmonths) | eval avg_d=round(avg_m/30) | eval at_month=round(avg_m*$cutptn_seed$*0.01) | eval at_day=round(avg_d*$cutptn_seed$*0.01) | table category_name , avg_m, at_month , at_day";
+	    mgrId = "avgByCatSearch";
+	    new SearchManager({
+		id: mgrId,
+		search: mvc.tokenSafe(qry)
+	    });
+	    var CostCutTable = new TableView({
+                id: "result_table",
+		managerid: mgrId,
+		pageSize: "30",
+		el: $("#result_table")
+	    }).render();
+            ///////////////////////////////////////////////////////////////////////
+            //Dropdown month
+            ///////////////////////////////////////////////////////////////////////
+            var DropdownView = require("splunkjs/mvc/dropdownview");
+            var ddlist = [{ label:"3%cut" , value:"3"},
+                          { label:"5%cut" , value:"5"},
+                          { label:"10%cut" , value:"10"}
+			  ];
+	    var CutPtnDrpDwn = new DropdownView({
+                id: "cutptn_dropdown",
+                managerid: "cmlpine_search",
+                choices: ddlist,
+                value: mvc.tokenSafe("$cutptn_seed$"),
+                el: $("#percentage_list")
+            }).render();
+
+       }); //require end
+    </script>
+{% endblock js %}

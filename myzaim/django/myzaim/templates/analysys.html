@@ -2,7 +2,6 @@
 {# % extends "splunkdj:base_with_account_bar.html" % #}
 {% load splunkmvc %}
 
-{# start css 20140908 #}
 {% block css %}
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}{{app_name}}/custom.css">
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}splunkjs/css/dashboard.css">
@@ -16,7 +15,6 @@
 }
 </style>
 {% endblock css %}
-{# end css 20140908 #}
 
 {% block content %}
 <div class="dashboard-body container-fluid main-section-body" >
@@ -78,12 +76,7 @@
         ];
 	require(deps, function(mvc) {
             var TokenForwarder= require("splunkjs/mvc/tokenforwarder");
-            var SearchManager = require("splunkjs/mvc/searchmanager");
-	    //add punchcard start
-	    //add punchcard end
-
-	    //add bubble start
- 
+            var SearchManager = require("splunkjs/mvc/searchmanager")
             // TODO: Event handler
             var ChartView=require("splunkjs/mvc/chartview");
             new SearchManager({
@@ -107,7 +100,6 @@
             var ChartView=require("splunkjs/mvc/chartview");
             new SearchManager({
                 id: "cmpline_search",                 
-                //search: mvc.tokenSafe("| set union [search index=zaimdb category_id=101 earliest=\"$month_s$\" latest=\"$month_e$\" | stats sum(amount) AS amount_mday by date_mday | sort by date_mday | accum amount_mday AS total(latest) | table date_mday  total(latest) ] [search index=zaimdb category_id=101 earliest=\"$month_s_l$\" latest=\"$month_e_l$\" | stats sum(amount) AS amount_mday2 by date_mday | sort by date_mday | accum amount_mday2 AS total(last_year) | table date_mday  total(last_year)] | selfjoin date_mday keepsingle=true  | sort by date_mday")
                 search: mvc.tokenSafe("| set union [search index=zaimdb category_id=101 earliest=\"" + tokens[0]+ "\" latest=\""+ tokens[1]+"\" | stats sum(amount) AS amount_mday by date_mday | sort by date_mday | accum amount_mday AS total(latest) | table date_mday  total(latest) ] [search index=zaimdb category_id=101 earliest=\"" + tokens[2] + "\" latest=\"" + tokens[3] + "\" | stats sum(amount) AS amount_mday2 by date_mday | sort by date_mday | accum amount_mday2 AS total(last_year) | table date_mday  total(last_year)] | selfjoin date_mday keepsingle=true  | sort by date_mday")
             });
             var myLineChart = new ChartView({
@@ -142,11 +134,8 @@
 		el: $("#list_month")
 	    }).render();
             var sbg = splunkjs.mvc.Components.getInstance("cmp_dropdown");
-	//    var sbResult = document.getElementById("result");
 	    sbg.on("change",function(){
 		 var now = new Date();
-          //       sbResult.innerHTML="";
-		 //timerange(targetMonth in LatestYear)
                  new TokenForwarder( "$month_seed$" , tokens[0], function(targetMonth){
 	             var now = new Date();
 		     resultToken= targetMonth + "/01/" + now.getFullYear() +  ":00:00:00";
@@ -207,7 +196,6 @@
 	             return qry;
 	     };
              var qry = createQueryByCidGidAndYear("$cat_id$","$gre_id$",2);
-            // sbResult.innerHTML = sbResult.innerHTML + " query -> " + qry;
              //create search query end
              
 
@@ -218,10 +206,6 @@
              new SearchManager({
                  id: "cmp_yr_search",       
                  search: mvc.tokenSafe( qry )
-                     //search: "| pivot Zaim_Data zaim_data sum(amount) AS \"cost\" SPLITROW n_month AS month SPLITCOL date_year SORT 0 n_month ROWSUMMARY 0 COLSUMMARY 0 NUMCOLS 0 SHOWOTHER 0"
-
-                     //search: mvc.tokenSafe( "| set union [search index=zaimdb category_id=105 genre_id=10503 date_year=2013 | eval n_month=strftime(_time,\"%m\") | stats sum(amount) AS charge(2013) by n_month ]  [search index=zaimdb category_id=105 genre_id=10503 date_year=2014 | eval n_month=strftime(_time,\"%m\") |  stats sum(amount) AS charge(2014) by n_month ] | selfjoin n_month keepsingle=true | table n_month charge(2013) charge(2014)")
-                     //search: mvc.tokenSafe("| set union [search index=zaimdb category_id=101 earliest=\"$month_s$\" latest=\"$month_e$\" | stats sum(amount) AS amount_mday by date_mday | sort by date_mday | accum amount_mday AS total(latest) | table date_mday  total(latest) ] [search index=zaimdb category_id=101 earliest=\"$month_s_l$\" latest=\"$month_e_l$\" | stats sum(amount) AS amount_mday2 by date_mday | sort by date_mday | accum amount_mday2 AS total(last_year) | table date_mday  total(last_year)] | selfjoin date_mday keepsingle=true  | sort by date_mday")
              });
              var myBarChart = new ChartView({
                  id: "mybarchart",

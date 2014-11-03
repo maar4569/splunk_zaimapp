@@ -2,7 +2,6 @@
 {# % extends "splunkdj:base_with_account_bar.html" % #}
 {% load splunkmvc %}
 
-{# start css 20140908 #}
 {% block css %}
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}{{app_name}}/custom.css">
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}splunkjs/css/dashboard.css">
@@ -16,7 +15,6 @@
 }
 </style>
 {% endblock css %}
-{# end css 20140908 #}
 
 {% block content %}
 <div class="dashboard-body container-fluid main-section-body" >
@@ -27,23 +25,12 @@
                 <div class="panel-head">
                     <h2>Total Costs And Average</h2>with private money
                 </div>
-                <div class="panel-body" style="width:1600px;">
+                <div class="panel-body" style="width:1400px;">
                     <div style="float:left;width:65%" id="expenses_line"></div>
                     <div id="avg_by_cat_pie"></div>
                 </div>
             </div>
         </div>
-<!--	<div class="dashboard-cell" >
-            <div class="dashboard-panel">
-                <div class="panel-head">
-                    <h2>Average Costs By Category</h2>
-                </div>
-                <div class="panel-body" style="width:512px;">
-                    <div id="avg_by_cat_pie"></div>
-                </div>
-            </div>
-        </div>
-	-->
     </div>
     <div class="dashboard-row">
         <div class="dashboard-cell">
@@ -96,7 +83,6 @@
 	    var mgrId = "totalByCatSearch";
             new SearchManager({
                 id: mgrId,
-		//search: mvc.tokenSafe("| pivot Zaim_Data zaim_data sum(amount) AS \"amount\" SPLITROW _time AS _time PERIOD auto SPLITCOL category_name SORT 0 _time ROWSUMMARY 0 COLSUMMARY 0 NUMCOLS 100 SHOWOTHER 1")
 		search: mvc.tokenSafe("| pivot Zaim_Data zaim_data sum(amount) AS \"amount\" SPLITROW month_year AS month_year PERIOD auto SPLITCOL category_name SORT 0 _time ROWSUMMARY 0 COLSUMMARY 0 NUMCOLS 100 SHOWOTHER 1")
             });
             var totalByCatChart = new ChartView({
@@ -109,10 +95,18 @@
             }).render();
 	    ///////////////////////////////////////
 	    //piechart average by category
+            //calculate average 2013/06 - now
+	    var endYear=2013;
+	    var endMonth=7;
+	    var now=new Date();
+	    var startYear = now.getFullYear();
+	    var startMonth = now.getMonth()+1;
+	    var n_monthes = (startYear-endYear) * 12 + startMonth-endMonth + 1;
+	    var qry = "index=zaimdb | stats sum(amount) as total by category_name  | eval nmonths="+ n_monthes +"|  eval avg_m=round(total/nmonths) | eval avg_d=round(avg_m/30) | eval estimate_5%_m=round(avg_m*0.05) | eval estimate_5%_d=round(avg_d*0.05) | table category_name , avg_m";
 	    mgrId = "avgByCatSearch";
 	    new SearchManager({
-                id: mgrId,
-		search: mvc.tokenSafe("| datamodel Zaim_Data zaim_data search | stats sum(zaim_data.amount) AS amount by zaim_data.month_year zaim_data.category_name | stats avg(amount) As average by zaim_data.category_name | eval average=round(average)")
+		id: mgrId,
+		search: mvc.tokenSafe(qry)
 	    });
 	    var avgByCatChart = new ChartView({
                 id: "avgByCatPie",

@@ -2,6 +2,7 @@
     <view name="default" default="true"/>
     <a name="home" href="/dj/redirector/myzaim/home">Home</a>
     <a name="analysys" href="/dj/myzaim/analysys">Analysys</a>
+    <a name="simulation" href="/dj/myzaim/simulation">Simulation</a>
+    <a name="adv_search" href="/dj/myzaim/advancedsearch">Advanced Search</a>
     <a name="infographs" href="/dj/myzaim/infographs">InfoGraphics</a>
-    <a name="infographs" href="/dj/myzaim/advancedsearch">Advanced Search</a>
 </nav>

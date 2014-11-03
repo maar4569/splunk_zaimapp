@@ -1,0 +1,54 @@
+[lookups/zaim_category_id.csv]
+export = none
+owner = nobody
+version = 6.1.1
+modtime = 1414698974.641931000
+
+[datamodels/Zaim_Data]
+access = read : [ * ], write : [ * ]
+export = system
+owner = nobody
+version = 6.1.1
+modtime = 1414696405.803916000
+
+[models/Zaim_Data]
+access = read : [ * ], write : [ * ]
+export = system
+owner = nobody
+version = 6.1.1
+modtime = 1414696405.805423000
+
+[lookups/zaim_genre_id.csv]
+export = none
+owner = nobody
+version = 6.1.1
+modtime = 1414698982.194464000
+
+[transforms/zaim_category]
+export = system
+owner = nobody
+version = 6.1.1
+modtime = 1414700567.307422000
+
+[transforms/zaim_genre]
+export = system
+owner = nobody
+version = 6.1.1
+modtime = 1414700613.857764000
+
+[props/source%3A%3A...%2Fhome%2Fmasa1022ari%2Frailsapp%2Fzaimauth%2Flog%2Fpaymentlog%2F%2A.json/LOOKUP-category]
+export = system
+owner = nobody
+version = 6.1.1
+modtime = 1414698409.517625000
+
+[props/source%3A%3A...%2Fhome%2Fmasa1022ari%2Frailsapp%2Fzaimauth%2Flog%2Fpaymentlog%2F%2A.json/LOOKUP-genre]
+export = system
+owner = nobody
+version = 6.1.1
+modtime = 1414698421.488833000
+
+[indexes/zaimdb]
+owner = admin
+version = 6.1.1
+modtime = 1414764206.836388000

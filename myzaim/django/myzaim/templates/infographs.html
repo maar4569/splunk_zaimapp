@@ -2,7 +2,6 @@
 {# % extends "splunkdj:base_with_account_bar.html" % #}
 {% load splunkmvc %}
 
-{# start css 20140908 #}
 {% block css %}
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}{{app_name}}/custom.css">
 <link rel="stylesheet" type="text/css" href="{{STATIC_URL}}splunkjs/css/dashboard.css">
@@ -16,7 +15,6 @@
 }
 </style>
 {% endblock css %}
-{# end css 20140908 #}
 
 {% block content %}
 <div class="dashboard-body container-fluid main-section-body" >
@@ -61,7 +59,6 @@
 	    new SearchManager({
                 id: "punch_search",
 		search: "index=zaimdb category_id=101 |  stats count by date_wday genre_name"
-		//NGsearch: "index=zaimdb category_id=101 |  stats sum(amount) by date_wday genre_name"
 	       
 	    });
 	    var mypunchcard = new PunchCard({
